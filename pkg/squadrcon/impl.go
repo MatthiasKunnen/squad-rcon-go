@@ -71,46 +71,43 @@ func (r *rconImpl) Execute(command string) (string, error) {
 func (r *rconImpl) Start() {
 	go func() {
 		for {
-			select {
-			default:
-				fmt.Printf("Trying to read packet\n")
-				packet := packet{}
-				_, err := packet.ReadFrom(r.conn)
+			fmt.Printf("Trying to read packet\n")
+			packet := packet{}
+			_, err := packet.ReadFrom(r.conn)
 
-				if errors.Is(err, net.ErrClosed) {
-					return
-				}
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
 
-				if err != nil {
-					fmt.Println("Error reading from connection:", err)
+			if err != nil {
+				fmt.Println("Error reading from connection:", err)
+				continue
+			}
+
+			if !r.authenticated {
+				switch packet.Type {
+				case serverDataResponseValue:
+					if packet.GetBodySize() > 0 {
+						fmt.Printf(
+							"Discarding non-empty data packet while not authenticated %v\n",
+							packet,
+						)
+					}
 					continue
 				}
-
-				if !r.authenticated {
-					switch packet.Type {
-					case serverDataResponseValue:
-						if packet.GetBodySize() > 0 {
-							fmt.Printf(
-								"Discarding non-empty data packet while not authenticated %v\n",
-								packet,
-							)
-						}
-						continue
-					}
-				}
-
-				//fmt.Printf("Packet: %v\n", packet)
-				r.callbackLock.Lock()
-				callback, exists := r.callbacks[packet.Id]
-				if exists {
-					callback.Channel <- packet.GetBody()
-					close(callback.Channel)
-					delete(r.callbacks, packet.Id)
-				} else {
-					fmt.Printf("Callback for ID %d not registered\n", packet.Id)
-				}
-				r.callbackLock.Unlock()
 			}
+
+			//fmt.Printf("Packet: %v\n", packet)
+			r.callbackLock.Lock()
+			callback, exists := r.callbacks[packet.Id]
+			if exists {
+				callback.Channel <- packet.GetBody()
+				close(callback.Channel)
+				delete(r.callbacks, packet.Id)
+			} else {
+				fmt.Printf("Callback for ID %d not registered\n", packet.Id)
+			}
+			r.callbackLock.Unlock()
 		}
 	}()
 }
