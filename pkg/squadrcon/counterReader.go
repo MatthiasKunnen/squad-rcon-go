@@ -11,8 +11,10 @@ type countingReader struct {
 	TotalBytesRead int64
 }
 
+// Read reads exactly len(output) bytes into output.
+// It returns the number of bytes copied and an error if fewer bytes were read.
 func (c *countingReader) Read(output []byte) (n int, err error) {
-	n, err = c.Reader.Read(output)
+	n, err = io.ReadFull(c.Reader, output)
 	c.Bytes = append(c.Bytes, output...)
 	c.TotalBytesRead += int64(n)
 	return n, err
