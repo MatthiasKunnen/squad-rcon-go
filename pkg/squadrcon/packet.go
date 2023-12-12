@@ -100,14 +100,9 @@ func (packet *packet) ReadFrom(r io.Reader) (int64, error) {
 		}
 	}
 
-	previous := reader.TotalBytesRead
 	packet.Body = make([]byte, bodySize)
-	bytesRead, err := reader.Read(packet.Body)
-	if bytesRead < int(bodySize) {
-		panic(fmt.Sprintf("Read less bytes than expected, %d < %d\n", bytesRead, bodySize))
-	}
+	_, err := reader.Read(packet.Body)
 
-	fmt.Printf("Size: %d, BodySize: %d, read %d bytes\n", packet.Size, bodySize, reader.TotalBytesRead-previous)
 	if err != nil {
 		return reader.TotalBytesRead, &packetParseError{
 			Err:         fmt.Errorf("error parsing body, body Size: %d. %w", bodySize, err),
