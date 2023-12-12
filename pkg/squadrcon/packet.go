@@ -179,3 +179,7 @@ type packetParseError struct {
 func (e *packetParseError) Error() string {
 	return fmt.Sprintf("failed to parse packet: %s. Bytes: % x", e.Err, e.PacketBytes)
 }
+
+func (e *packetParseError) Unwrap() error {
+	return e.Err
+}
