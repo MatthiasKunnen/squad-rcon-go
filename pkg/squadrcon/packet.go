@@ -110,7 +110,7 @@ func (packet *packet) ReadFrom(r io.Reader) (int64, error) {
 	fmt.Printf("Size: %d, BodySize: %d, read %d bytes\n", packet.Size, bodySize, reader.TotalBytesRead-previous)
 	if err != nil {
 		return reader.TotalBytesRead, &packetParseError{
-			Err:         fmt.Errorf("error parsing body, body Size: %d", bodySize),
+			Err:         fmt.Errorf("error parsing body, body Size: %d. %w", bodySize, err),
 			PacketBytes: reader.Bytes,
 		}
 	}
