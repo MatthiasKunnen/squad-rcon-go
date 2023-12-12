@@ -5,6 +5,28 @@ import (
 	"squad-rcon-go/pkg/squadrcon"
 )
 
+type Inter interface {
+	SomeMethod() string
+}
+
+type Impl struct {
+	Data string
+}
+
+func (i *Impl) SomeMethod() string {
+	return "Data: " + i.Data
+}
+
+func GetInter() Inter {
+	// Create an instance of Impl
+	implInstance := Impl{
+		Data: "Hello from Impl",
+	}
+
+	// Return the pointer to Impl as an interface type
+	return &implInstance
+}
+
 var examples = []string{
 	`----- Active Players -----
 ID: 0 | SteamID: 76561197999957991 | Name: ✯RAIDR✯Jon | Team ID: 1 | Squad ID: 1 | Is Leader: True | Role: USA_SL_01

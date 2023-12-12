@@ -9,10 +9,6 @@ var (
 	ErrNotConnected = errors.New("no connection, use .Connect to create a connection")
 )
 
-type Rcon interface {
-	Execute(command string) (string, error)
-}
-
 type SquadRcon struct {
 	connection *rcon.Conn
 }
