@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"squad-rcon-go/pkg/squadrcon"
-	"time"
 )
 
 func main() {
@@ -24,7 +23,6 @@ func main() {
 	}
 
 	fmt.Println(response)
-	time.Sleep(5 * time.Second)
 	//
 	//for {
 	//	fmt.Println(time.Now().Format("2006-01-02-15:04:05"))

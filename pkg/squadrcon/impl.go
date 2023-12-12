@@ -41,24 +41,16 @@ type rconImpl struct {
 	dialTimeout   time.Duration
 	execIdCounter int
 	startId       int
-	stopReading   chan struct{}
 	writeTimeout  time.Duration
 }
 
 // Close closes the connection.
 func (r *rconImpl) Close() error {
-	if r.stopReading != nil {
-		close(r.stopReading)
-		r.stopReading = nil
+	if err := r.conn.Close(); err != nil {
+		return err
 	}
 
-	var err error
-	if r.conn != nil {
-		err = r.conn.Close()
-		r.conn = nil
-	}
-
-	return err
+	return nil
 }
 
 func (r *rconImpl) Execute(command string) (string, error) {
@@ -77,13 +69,10 @@ func (r *rconImpl) Execute(command string) (string, error) {
 }
 
 func (r *rconImpl) Start() {
-	r.stopReading = make(chan struct{})
 	counter := 0
 	go func() {
 		for {
 			select {
-			case <-r.stopReading:
-				return
 			default:
 				fmt.Printf("Trying to read packet\n")
 				//counter++
@@ -104,6 +93,11 @@ func (r *rconImpl) Start() {
 				}
 				packet := packet{}
 				_, err := packet.ReadFrom(r.conn)
+
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
+
 				if err != nil {
 					fmt.Println("Error reading from connection:", err)
 					continue
