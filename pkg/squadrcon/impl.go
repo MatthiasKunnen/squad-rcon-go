@@ -69,28 +69,11 @@ func (r *rconImpl) Execute(command string) (string, error) {
 }
 
 func (r *rconImpl) Start() {
-	counter := 0
 	go func() {
 		for {
 			select {
 			default:
 				fmt.Printf("Trying to read packet\n")
-				//counter++
-				if counter >= 3 {
-					data := make([]byte, 1)
-					b := make([]byte, 4000)
-					for {
-						bytesRead, err := r.conn.Read(b)
-						if err != nil {
-							fmt.Printf("Error during loop read: %v\n", err)
-							return
-						}
-
-						data = append(data, b[0:bytesRead]...)
-
-						fmt.Printf("% x\n", data)
-					}
-				}
 				packet := packet{}
 				_, err := packet.ReadFrom(r.conn)
 
