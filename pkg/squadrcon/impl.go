@@ -128,12 +128,13 @@ func (r *rconImpl) Start() {
 // authenticate sends a serverDataAuth request and authenticates the following requests.
 func (r *rconImpl) authenticate(password string) error {
 	r.authenticated = false
-	if err := r.write(serverDataAuth, 5, password); err != nil {
+	packetId := r.getNextId()
+	if err := r.write(serverDataAuth, packetId, password); err != nil {
 		return err
 	}
 
 	select {
-	case <-r.addCallback(5):
+	case <-r.addCallback(packetId):
 		// Login success
 		r.authenticated = true
 		return nil
