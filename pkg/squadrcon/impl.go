@@ -30,8 +30,11 @@ type rconResponse struct {
 }
 
 type callback struct {
+	// The channel which will be passed the data as responded by RCON.
 	Channel chan string
-	Data    string
+
+	// The aggregated data.
+	Data string
 }
 
 type rconImpl struct {
