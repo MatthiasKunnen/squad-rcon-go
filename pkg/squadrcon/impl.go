@@ -3,6 +3,7 @@ package squadrcon
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -76,6 +77,11 @@ func (r *rconImpl) Start() {
 			_, err := packet.ReadFrom(r.conn)
 
 			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				// Can happen when connection is closed by server due to inactivity
 				return
 			}
 
