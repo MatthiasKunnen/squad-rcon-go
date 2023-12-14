@@ -48,6 +48,7 @@ type rconImpl struct {
 	conn          net.Conn
 	dialTimeout   time.Duration
 	execIdCounter int
+	idCounterLock sync.Mutex
 	startId       int
 	writeTimeout  time.Duration
 }
@@ -210,6 +211,8 @@ func (r *rconImpl) write(packetType int32, packetId int32, command string) error
 // Will always return even numbers.
 // The returned number will be between startId and startId + wrapIdsAfter.
 func (r *rconImpl) getNextId() int32 {
+	r.idCounterLock.Lock()
+	defer r.idCounterLock.Unlock()
 	if r.execIdCounter < r.startId || r.execIdCounter > r.startId+wrapIdsAfter+1 {
 		r.execIdCounter = r.startId
 	}
