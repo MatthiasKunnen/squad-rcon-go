@@ -24,7 +24,7 @@ func main() {
 	}
 
 	fmt.Printf(
-		"%[1]s Execute response %[1]s\n%s\n%[1]s END OF RESPONSE %[1]s",
+		"%[1]s Execute response %[1]s\n%s\n%[1]s END OF RESPONSE %[1]s\n",
 		strings.Repeat("=", 8),
 		response,
 	)
