@@ -79,16 +79,13 @@ func (r *rconImpl) Start() {
 			packet := packet{}
 			_, err := packet.ReadFrom(r.conn)
 
-			if errors.Is(err, net.ErrClosed) {
+			switch {
+			case errors.Is(err, net.ErrClosed):
 				return
-			}
-
-			if errors.Is(err, io.ErrUnexpectedEOF) {
+			case errors.Is(err, io.ErrUnexpectedEOF):
 				// Can happen when connection is closed by server due to inactivity
 				return
-			}
-
-			if err != nil {
+			case err != nil:
 				fmt.Println("Error reading from connection:", err)
 				continue
 			}
