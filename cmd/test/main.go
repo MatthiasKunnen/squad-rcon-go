@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"squad-rcon-go/pkg/squadrcon"
+	"strings"
 )
 
 func main() {
@@ -22,7 +23,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(response)
+	fmt.Printf(
+		"%[1]s Execute response %[1]s\n%s\n%[1]s END OF RESPONSE %[1]s",
+		strings.Repeat("=", 8),
+		response,
+	)
 	//
 	//for {
 	//	fmt.Println(time.Now().Format("2006-01-02-15:04:05"))
