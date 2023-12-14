@@ -36,7 +36,7 @@ type callback struct {
 type rconImpl struct {
 	authenticated bool
 	callbackLock  sync.Mutex
-	callbacks     map[int32]callback
+	callbacks     map[int32]*callback
 	conn          net.Conn
 	dialTimeout   time.Duration
 	execIdCounter int
@@ -133,7 +133,7 @@ func (r *rconImpl) authenticate(password string) error {
 func (r *rconImpl) addCallback(id int32) chan string {
 	channel := make(chan string)
 	r.callbackLock.Lock()
-	r.callbacks[id] = callback{
+	r.callbacks[id] = &callback{
 		Channel: channel,
 	}
 	r.callbackLock.Unlock()

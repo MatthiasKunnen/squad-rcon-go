@@ -28,7 +28,7 @@ func Connect(address string, password string, settings RconSettings) (Rcon, erro
 	client := &rconImpl{
 		dialTimeout:   5 * time.Second,
 		writeTimeout:  5 * time.Second,
-		callbacks:     make(map[int32]callback),
+		callbacks:     make(map[int32]*callback),
 		execIdCounter: 10000,
 		startId:       10000,
 	}
