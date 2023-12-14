@@ -90,6 +90,14 @@ func (r *rconImpl) Start() {
 				continue
 			}
 
+			fmt.Printf(
+				"Packet received; Id: %d, Type: %d, Body size: %d, Body: %s\n",
+				packet.Id,
+				packet.Type,
+				packet.GetBodySize(),
+				packet.GetBody(),
+			)
+
 			if !r.authenticated {
 				switch packet.Type {
 				case serverDataResponseValue:
@@ -103,7 +111,6 @@ func (r *rconImpl) Start() {
 				}
 			}
 
-			//fmt.Printf("Packet: %v\n", packet)
 			r.callbackLock.Lock()
 			callback, exists := r.callbacks[packet.Id]
 			if exists {
