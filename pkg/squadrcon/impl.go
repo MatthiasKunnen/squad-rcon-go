@@ -34,7 +34,11 @@ type callback struct {
 	Channel chan string
 
 	// The aggregated data.
-	Data string
+	Data []byte
+
+	// Whether the response could be spread out over multiple packets.
+	// When true, a confirmation command should be sent.
+	MaybeMultiPacket bool
 }
 
 type rconImpl struct {
@@ -69,7 +73,13 @@ func (r *rconImpl) Execute(command string) (string, error) {
 		return "", err
 	}
 
-	return <-r.addCallback(packetId), nil
+	// Send a short command with packetId + 1 after each command. When we receive the response to
+	// this command, we know that all the responses of the previous command have arrived.
+	if err := r.write(serverDataExecCommand, packetId+1, "ShowCurrentMap"); err != nil {
+		return "", err
+	}
+
+	return <-r.addCallback(packetId, true), nil
 }
 
 func (r *rconImpl) Start() {
@@ -111,17 +121,42 @@ func (r *rconImpl) Start() {
 				}
 			}
 
+			// Completion packets, identified by odd IDs, signal completeness for responses with
+			// ID - 1. E.g.:
+			// When receiving a packet with an even ID, we append the data to the callbacks[ID].Data.
+			// When receiving a packet with an odd ID, we know that callbacks[ID - 1] is complete.
+			isCompletionPacket := packet.Id%2 == 1
+			callbackId := packet.Id
+
+			if isCompletionPacket {
+				callbackId--
+			}
+
 			r.callbackLock.Lock()
-			callback, exists := r.callbacks[packet.Id]
+			callback, exists := r.callbacks[callbackId]
 			if !exists {
 				fmt.Printf("Callback for ID %d not registered\n", packet.Id)
 				r.callbackLock.Unlock()
 				continue
 			}
 
-			callback.Channel <- packet.GetBody()
-			close(callback.Channel)
-			delete(r.callbacks, packet.Id)
+			isComplete := false
+			if callback.MaybeMultiPacket {
+				if isCompletionPacket {
+					isComplete = true
+				} else {
+					callback.Data = append(callback.Data, packet.Body...)
+				}
+			} else {
+				callback.Data = packet.Body
+				isComplete = true
+			}
+
+			if isComplete {
+				callback.Channel <- string(callback.Data)
+				close(callback.Channel)
+				delete(r.callbacks, packet.Id)
+			}
 			r.callbackLock.Unlock()
 		}
 	}()
@@ -136,21 +171,23 @@ func (r *rconImpl) authenticate(password string) error {
 	}
 
 	select {
-	case <-r.addCallback(packetId):
+	case <-r.addCallback(packetId, false):
 		// Login success
 		r.authenticated = true
 		return nil
-	case <-r.addCallback(-1):
+	case <-r.addCallback(-1, false):
 		// Login failure
 		return fmt.Errorf("auth failed, TK change error")
 	}
 }
 
-func (r *rconImpl) addCallback(id int32) chan string {
+func (r *rconImpl) addCallback(id int32, maybeMultiPacket bool) chan string {
 	channel := make(chan string)
 	r.callbackLock.Lock()
 	r.callbacks[id] = &callback{
-		Channel: channel,
+		Channel:          channel,
+		Data:             make([]byte, 0),
+		MaybeMultiPacket: maybeMultiPacket,
 	}
 	r.callbackLock.Unlock()
 	return channel
@@ -169,11 +206,19 @@ func (r *rconImpl) write(packetType int32, packetId int32, command string) error
 	return err
 }
 
+// getNextId returns the next packet ID.
+// Will always return even numbers.
+// The returned number will be between startId and startId + wrapIdsAfter.
 func (r *rconImpl) getNextId() int32 {
-	r.execIdCounter++
-	if r.execIdCounter > r.startId+wrapIdsAfter {
+	if r.execIdCounter < r.startId || r.execIdCounter > r.startId+wrapIdsAfter+1 {
 		r.execIdCounter = r.startId
 	}
 
-	return int32(r.execIdCounter)
+	if r.execIdCounter%2 == 1 {
+		r.execIdCounter++
+	}
+
+	result := int32(r.execIdCounter)
+	r.execIdCounter += 2
+	return result
 }

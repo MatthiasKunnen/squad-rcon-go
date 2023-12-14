@@ -15,6 +15,7 @@
 !/.gitignore
 !/.gitattributes
 !LICENSE
+!Notes.md
 !README.md
 
 !/data/*.md
