@@ -113,13 +113,15 @@ func (r *rconImpl) Start() {
 
 			r.callbackLock.Lock()
 			callback, exists := r.callbacks[packet.Id]
-			if exists {
-				callback.Channel <- packet.GetBody()
-				close(callback.Channel)
-				delete(r.callbacks, packet.Id)
-			} else {
+			if !exists {
 				fmt.Printf("Callback for ID %d not registered\n", packet.Id)
+				r.callbackLock.Unlock()
+				continue
 			}
+
+			callback.Channel <- packet.GetBody()
+			close(callback.Channel)
+			delete(r.callbacks, packet.Id)
 			r.callbackLock.Unlock()
 		}
 	}()
