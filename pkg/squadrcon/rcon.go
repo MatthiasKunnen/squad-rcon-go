@@ -52,7 +52,7 @@ func Connect(address string, password string, settings RconSettings) (Rcon, erro
 	if err := client.authenticate(password); err != nil {
 		if err2 := client.Close(); err2 != nil {
 			return client, fmt.Errorf(
-				"failed to close connection: %v. Previous error: %v",
+				"failed to close connection: %w. Previous error: %w",
 				err2,
 				err,
 			)
