@@ -36,10 +36,6 @@ type callback struct {
 
 	// The aggregated data.
 	Data []byte
-
-	// Whether the response could be spread out over multiple packets.
-	// When true, a confirmation command should be sent.
-	MaybeMultiPacket bool
 }
 
 type rconImpl struct {
@@ -81,7 +77,7 @@ func (r *rconImpl) Execute(command string) (string, error) {
 		return "", err
 	}
 
-	return <-r.addCallback(packetId, true), nil
+	return <-r.addCallback(packetId), nil
 }
 
 func (r *rconImpl) Start() {
@@ -134,18 +130,19 @@ func (r *rconImpl) authenticate(password string) error {
 	return nil
 }
 
-func (r *rconImpl) addCallback(id int32, maybeMultiPacket bool) chan string {
+func (r *rconImpl) addCallback(id int32) chan string {
 	channel := make(chan string)
 	r.callbackLock.Lock()
 	r.callbacks[id] = &callback{
-		Channel:          channel,
-		Data:             make([]byte, 0),
-		MaybeMultiPacket: maybeMultiPacket,
+		Channel: channel,
+		Data:    make([]byte, 0),
 	}
 	r.callbackLock.Unlock()
 	return channel
 }
 
+// handleIncomingPacket processes all incoming packets after authentication.
+// It assumes that responses are multi-packet and are followed by a _confirmation command_.
 func (r *rconImpl) handleIncomingPacket() bool {
 	if !r.authenticated {
 		return false
@@ -174,19 +171,6 @@ func (r *rconImpl) handleIncomingPacket() bool {
 		packet.GetBody(),
 	)
 
-	if !r.authenticated {
-		switch packet.Type {
-		case serverDataResponseValue:
-			if packet.GetBodySize() > 0 {
-				fmt.Printf(
-					"Discarding non-empty data packet while not authenticated %v\n",
-					packet,
-				)
-			}
-			return true
-		}
-	}
-
 	// Completion packets, identified by odd IDs, signal completeness for responses with
 	// ID - 1. E.g.:
 	// When receiving a packet with an even ID, we append the data to the callbacks[ID].Data.
@@ -206,23 +190,14 @@ func (r *rconImpl) handleIncomingPacket() bool {
 		return true
 	}
 
-	isComplete := false
-	if callback.MaybeMultiPacket {
-		if isCompletionPacket {
-			isComplete = true
-		} else {
-			callback.Data = append(callback.Data, packet.Body...)
-		}
-	} else {
-		callback.Data = packet.Body
-		isComplete = true
-	}
-
-	if isComplete {
+	if isCompletionPacket {
 		callback.Channel <- string(callback.Data)
 		close(callback.Channel)
 		delete(r.callbacks, packet.Id)
+	} else {
+		callback.Data = append(callback.Data, packet.Body...)
 	}
+
 	r.callbackLock.Unlock()
 	return true
 }
