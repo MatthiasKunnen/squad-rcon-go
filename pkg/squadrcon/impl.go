@@ -86,79 +86,9 @@ func (r *rconImpl) Execute(command string) (string, error) {
 func (r *rconImpl) Start() {
 	go func() {
 		for {
-			fmt.Printf("Trying to read packet\n")
-			packet := packet{}
-			_, err := packet.ReadFrom(r.conn)
-
-			switch {
-			case errors.Is(err, net.ErrClosed):
+			if r.handleIncomingPacket() == false {
 				return
-			case errors.Is(err, io.ErrUnexpectedEOF):
-				// Can happen when connection is closed by server due to inactivity
-				return
-			case err != nil:
-				fmt.Println("Error reading from connection:", err)
-				continue
 			}
-
-			fmt.Printf(
-				"Packet received; Id: %d, Type: %d, Body size: %d, Body: %s\n",
-				packet.Id,
-				packet.Type,
-				packet.GetBodySize(),
-				packet.GetBody(),
-			)
-
-			if !r.authenticated {
-				switch packet.Type {
-				case serverDataResponseValue:
-					if packet.GetBodySize() > 0 {
-						fmt.Printf(
-							"Discarding non-empty data packet while not authenticated %v\n",
-							packet,
-						)
-					}
-					continue
-				}
-			}
-
-			// Completion packets, identified by odd IDs, signal completeness for responses with
-			// ID - 1. E.g.:
-			// When receiving a packet with an even ID, we append the data to the callbacks[ID].Data.
-			// When receiving a packet with an odd ID, we know that callbacks[ID - 1] is complete.
-			isCompletionPacket := packet.Id%2 == 1
-			callbackId := packet.Id
-
-			if isCompletionPacket {
-				callbackId--
-			}
-
-			r.callbackLock.Lock()
-			callback, exists := r.callbacks[callbackId]
-			if !exists {
-				fmt.Printf("Callback for ID %d not registered\n", packet.Id)
-				r.callbackLock.Unlock()
-				continue
-			}
-
-			isComplete := false
-			if callback.MaybeMultiPacket {
-				if isCompletionPacket {
-					isComplete = true
-				} else {
-					callback.Data = append(callback.Data, packet.Body...)
-				}
-			} else {
-				callback.Data = packet.Body
-				isComplete = true
-			}
-
-			if isComplete {
-				callback.Channel <- string(callback.Data)
-				close(callback.Channel)
-				delete(r.callbacks, packet.Id)
-			}
-			r.callbackLock.Unlock()
 		}
 	}()
 }
@@ -192,6 +122,83 @@ func (r *rconImpl) addCallback(id int32, maybeMultiPacket bool) chan string {
 	}
 	r.callbackLock.Unlock()
 	return channel
+}
+
+func (r *rconImpl) handleIncomingPacket() bool {
+	fmt.Printf("Trying to read packet\n")
+	packet := packet{}
+	_, err := packet.ReadFrom(r.conn)
+
+	switch {
+	case errors.Is(err, net.ErrClosed):
+		return false
+	case errors.Is(err, io.ErrUnexpectedEOF):
+		// Can happen when connection is closed by server due to inactivity
+		return false
+	case err != nil:
+		fmt.Println("Error reading from connection:", err)
+		return true
+	}
+
+	fmt.Printf(
+		"Packet received; Id: %d, Type: %d, Body size: %d, Body: %s\n",
+		packet.Id,
+		packet.Type,
+		packet.GetBodySize(),
+		packet.GetBody(),
+	)
+
+	if !r.authenticated {
+		switch packet.Type {
+		case serverDataResponseValue:
+			if packet.GetBodySize() > 0 {
+				fmt.Printf(
+					"Discarding non-empty data packet while not authenticated %v\n",
+					packet,
+				)
+			}
+			return true
+		}
+	}
+
+	// Completion packets, identified by odd IDs, signal completeness for responses with
+	// ID - 1. E.g.:
+	// When receiving a packet with an even ID, we append the data to the callbacks[ID].Data.
+	// When receiving a packet with an odd ID, we know that callbacks[ID - 1] is complete.
+	isCompletionPacket := packet.Id%2 == 1
+	callbackId := packet.Id
+
+	if isCompletionPacket {
+		callbackId--
+	}
+
+	r.callbackLock.Lock()
+	callback, exists := r.callbacks[callbackId]
+	if !exists {
+		fmt.Printf("Callback for ID %d not registered\n", packet.Id)
+		r.callbackLock.Unlock()
+		return true
+	}
+
+	isComplete := false
+	if callback.MaybeMultiPacket {
+		if isCompletionPacket {
+			isComplete = true
+		} else {
+			callback.Data = append(callback.Data, packet.Body...)
+		}
+	} else {
+		callback.Data = packet.Body
+		isComplete = true
+	}
+
+	if isComplete {
+		callback.Channel <- string(callback.Data)
+		close(callback.Channel)
+		delete(r.callbacks, packet.Id)
+	}
+	r.callbackLock.Unlock()
+	return true
 }
 
 func (r *rconImpl) write(packetType int32, packetId int32, command string) error {
