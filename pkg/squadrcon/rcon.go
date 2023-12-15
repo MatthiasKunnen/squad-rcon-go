@@ -47,7 +47,6 @@ func Connect(address string, password string, settings RconSettings) (Rcon, erro
 		return nil, fmt.Errorf("failed to connect to rcon server on %s: %w", address, err)
 	}
 	client.conn = conn
-	client.Start()
 
 	if err := client.authenticate(password); err != nil {
 		if err2 := client.Close(); err2 != nil {
@@ -60,6 +59,8 @@ func Connect(address string, password string, settings RconSettings) (Rcon, erro
 
 		return client, fmt.Errorf("failed to authenticate rcon connection: %w", err)
 	}
+
+	client.Start()
 
 	return client, nil
 }

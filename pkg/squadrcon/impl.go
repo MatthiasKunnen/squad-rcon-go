@@ -101,12 +101,17 @@ func (r *rconImpl) authenticate(password string) error {
 		return err
 	}
 
+	successChannel := r.addCallback(packetId, false)
+	failureChannel := r.addCallback(-1, false)
+
+	r.handleIncomingPacket()
+
 	select {
-	case <-r.addCallback(packetId, false):
+	case <-successChannel:
 		// Login success
 		r.authenticated = true
 		return nil
-	case <-r.addCallback(-1, false):
+	case <-failureChannel:
 		// Login failure
 		return fmt.Errorf("auth failed, TK change error")
 	}
