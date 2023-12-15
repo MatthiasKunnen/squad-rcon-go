@@ -22,7 +22,8 @@ const (
 )
 
 var (
-	ErrCommandEmpty = errors.New("command is empty")
+	ErrCommandEmpty      = errors.New("command is empty")
+	ErrIncorrectPassword = errors.New("RCON password is incorrect")
 )
 
 type rconResponse struct {
@@ -101,20 +102,36 @@ func (r *rconImpl) authenticate(password string) error {
 		return err
 	}
 
-	successChannel := r.addCallback(packetId, false)
-	failureChannel := r.addCallback(-1, false)
+	emptyPacket := packet{}
+	_, err := emptyPacket.ReadFrom(r.conn)
 
-	r.handleIncomingPacket()
-
-	select {
-	case <-successChannel:
-		// Login success
-		r.authenticated = true
-		return nil
-	case <-failureChannel:
-		// Login failure
-		return fmt.Errorf("auth failed, TK change error")
+	// Squad's RCON implementation closes the connection on failed authentication
+	switch {
+	case errors.Is(err, net.ErrClosed):
+		return err
+	case errors.Is(err, io.EOF):
+		return ErrIncorrectPassword
+	case errors.Is(err, io.ErrUnexpectedEOF):
+		// Can happen when connection is closed by server due to inactivity
+		return err
+	case err != nil:
+		fmt.Println("Error reading from connection:", err)
+		return err
 	}
+
+	authResultPacket := packet{}
+	_, err = authResultPacket.ReadFrom(r.conn)
+
+	if err != nil {
+		return err
+	}
+
+	if authResultPacket.Id != packetId {
+		return fmt.Errorf("unexpected ID in auth response. Got %d, expected %d", authResultPacket.Id, packetId)
+	}
+
+	r.authenticated = true
+	return nil
 }
 
 func (r *rconImpl) addCallback(id int32, maybeMultiPacket bool) chan string {
@@ -130,6 +147,10 @@ func (r *rconImpl) addCallback(id int32, maybeMultiPacket bool) chan string {
 }
 
 func (r *rconImpl) handleIncomingPacket() bool {
+	if !r.authenticated {
+		return false
+	}
+
 	fmt.Printf("Trying to read packet\n")
 	packet := packet{}
 	_, err := packet.ReadFrom(r.conn)

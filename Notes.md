@@ -9,6 +9,19 @@ Due to this, games that use the RCON protocol may implement it slightly differen
 
 ### Squad RCON
 
+### Authentication
+Authenticating the RCON connection differs from Valve's documentation.
+
+> This packet is a notification of the connection's current auth status.
+> When the server receives an auth request, it will respond with an empty
+> SERVERDATA_RESPONSE_VALUE, followed immediately by a SERVERDATA_AUTH_RESPONSE indicating whether
+> authentication succeeded or failed. Note that the status code is returned in the packet id field,
+> so when pairing the response with the original auth request, you may need to look at the packet
+> id of the preceding SERVERDATA_RESPONSE_VALUE.
+
+However, Squad does not respond with the described packets in case of incorrect credentials.
+When the wrong credentials are used, the connection is closed.
+
 #### Multi-packet responses
 
 If the response is too large, it is split over multiple packets.
