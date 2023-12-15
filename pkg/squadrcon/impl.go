@@ -24,6 +24,7 @@ const (
 var (
 	ErrCommandEmpty      = errors.New("command is empty")
 	ErrIncorrectPassword = errors.New("RCON password is incorrect")
+	ErrNotAuthenticated  = errors.New("not authenticated")
 )
 
 type rconResponse struct {
@@ -83,7 +84,9 @@ func (r *rconImpl) Execute(command string) (string, error) {
 func (r *rconImpl) Start() {
 	go func() {
 		for {
-			if r.handleIncomingPacket() == false {
+			if err := r.handleIncomingPacket(); err != nil {
+				// todo, set up reconnect on error
+				fmt.Printf("Encountered an error processing packets. Stopping. %v\n", err)
 				return
 			}
 		}
@@ -143,9 +146,9 @@ func (r *rconImpl) addCallback(id int32) chan string {
 
 // handleIncomingPacket processes all incoming packets after authentication.
 // It assumes that responses are multi-packet and are followed by a _confirmation command_.
-func (r *rconImpl) handleIncomingPacket() bool {
+func (r *rconImpl) handleIncomingPacket() error {
 	if !r.authenticated {
-		return false
+		return ErrNotAuthenticated
 	}
 
 	fmt.Printf("Trying to read packet\n")
@@ -154,13 +157,12 @@ func (r *rconImpl) handleIncomingPacket() bool {
 
 	switch {
 	case errors.Is(err, net.ErrClosed):
-		return false
+		return err
 	case errors.Is(err, io.ErrUnexpectedEOF):
 		// Can happen when connection is closed by server due to inactivity
-		return false
+		return err
 	case err != nil:
-		fmt.Println("Error reading from connection:", err)
-		return false
+		return err
 	}
 
 	fmt.Printf(
@@ -187,7 +189,7 @@ func (r *rconImpl) handleIncomingPacket() bool {
 	if !exists {
 		fmt.Printf("Callback for ID %d not registered\n", packet.Id)
 		r.callbackLock.Unlock()
-		return true
+		return nil
 	}
 
 	if isCompletionPacket {
@@ -199,7 +201,7 @@ func (r *rconImpl) handleIncomingPacket() bool {
 	}
 
 	r.callbackLock.Unlock()
-	return true
+	return nil
 }
 
 func (r *rconImpl) write(packetType int32, packetId int32, command string) error {
