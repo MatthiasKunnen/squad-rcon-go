@@ -160,7 +160,7 @@ func (r *rconImpl) handleIncomingPacket() bool {
 		return false
 	case err != nil:
 		fmt.Println("Error reading from connection:", err)
-		return true
+		return false
 	}
 
 	fmt.Printf(
