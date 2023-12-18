@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"squad-rcon-go/pkg/rcon"
 	"squad-rcon-go/pkg/squadrcon"
 	"strings"
 )

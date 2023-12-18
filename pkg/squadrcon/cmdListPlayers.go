@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"squad-rcon-go/pkg/rcon"
 	"strconv"
 	"strings"
 	"time"
@@ -48,7 +49,7 @@ var (
 	ErrResponseIsNotPlayerList = errors.New("response returned from rcon is not a player list")
 )
 
-func ListPlayers(rcon Rcon) (PlayerList, error) {
+func ListPlayers(rcon rcon.Rcon) (PlayerList, error) {
 	response, err := rcon.Execute("ListPlayers")
 	if err != nil {
 		return PlayerList{}, err

@@ -2,7 +2,7 @@ package squadrcon
 
 import (
 	"errors"
-	"github.com/gorcon/rcon"
+	"squad-rcon-go/pkg/rcon"
 )
 
 var (
@@ -10,16 +10,30 @@ var (
 )
 
 type SquadRcon struct {
-	connection *rcon.Conn
+	rcon rcon.Rcon
 }
 
-func (r *SquadRcon) Connect(address string, password string) error {
-	connection, err := rcon.Dial(address, password)
+func Connect(address string, password string, settings rcon.RconSettings) (rcon.Rcon, error) {
+	rc, err := rcon.Connect(address, password, settings)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	r.connection = connection
+	squadRcon := &SquadRcon{
+		rcon: rc,
+	}
 
-	return nil
+	return squadRcon, nil
+}
+
+func (r *SquadRcon) Close() error {
+	return r.rcon.Close()
+}
+
+func (r *SquadRcon) Execute(command string) (string, error) {
+	return r.rcon.Execute(command)
+}
+
+func (r *SquadRcon) Start() {
+	r.rcon.Start()
 }
