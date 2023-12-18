@@ -49,6 +49,11 @@ type rconImpl struct {
 	// Map of callbacks, key: packet ID, value callback to call when response is received.
 	callbacks map[int32]*callback
 
+	// The command to send after every Execute.
+	// Responses to this confirmation command confirm that all responses to the Execute command have
+	// been received.
+	confirmationCommand string
+
 	// TCP connection with RCON
 	conn net.Conn
 
@@ -91,7 +96,7 @@ func (r *rconImpl) Execute(command string) (string, error) {
 
 	// Send a short command with packetId + 1 after each command. When we receive the response to
 	// this command, we know that all the responses of the previous command have arrived.
-	if err := r.write(serverDataExecCommand, packetId+1, "ShowCurrentMap"); err != nil {
+	if err := r.write(serverDataExecCommand, packetId+1, r.confirmationCommand); err != nil {
 		return "", err
 	}
 

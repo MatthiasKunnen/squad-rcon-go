@@ -27,9 +27,10 @@ type Settings struct {
 
 func Connect(address string, password string, settings Settings) (rcon.Rcon, error) {
 	rc, err := rcon.Connect(address, password, rcon.Settings{
-		DialTimeout:   settings.DialTimeout,
-		PacketIdStart: settings.PacketIdStart,
-		WriteTimeout:  settings.WriteTimeout,
+		ConfirmationCommand: "ShowCurrentMap",
+		DialTimeout:         settings.DialTimeout,
+		PacketIdStart:       settings.PacketIdStart,
+		WriteTimeout:        settings.WriteTimeout,
 	})
 	if err != nil {
 		return nil, err
