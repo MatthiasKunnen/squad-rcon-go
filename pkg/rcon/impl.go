@@ -81,7 +81,7 @@ func (r *rconImpl) Execute(command string) (string, error) {
 	return <-r.addCallback(packetId), nil
 }
 
-func (r *rconImpl) Start() {
+func (r *rconImpl) start() {
 	go func() {
 		for {
 			if err := r.handleIncomingPacket(); err != nil {

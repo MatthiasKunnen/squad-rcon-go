@@ -33,7 +33,3 @@ func (r *SquadRcon) Close() error {
 func (r *SquadRcon) Execute(command string) (string, error) {
 	return r.rcon.Execute(command)
 }
-
-func (r *SquadRcon) Start() {
-	r.rcon.Start()
-}

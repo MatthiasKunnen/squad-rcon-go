@@ -9,7 +9,6 @@ import (
 type Rcon interface {
 	Close() error
 	Execute(command string) (string, error)
-	Start()
 }
 
 type RconSettings struct {
@@ -60,7 +59,7 @@ func Connect(address string, password string, settings RconSettings) (Rcon, erro
 		return client, fmt.Errorf("failed to authenticate rcon connection: %w", err)
 	}
 
-	client.Start()
+	client.start()
 
 	return client, nil
 }
