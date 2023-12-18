@@ -3,6 +3,7 @@ package squadrcon
 import (
 	"errors"
 	"squad-rcon-go/pkg/rcon"
+	"time"
 )
 
 var (
@@ -13,8 +14,23 @@ type SquadRcon struct {
 	rcon rcon.Rcon
 }
 
-func Connect(address string, password string, settings rcon.Settings) (rcon.Rcon, error) {
-	rc, err := rcon.Connect(address, password, settings)
+type Settings struct {
+	DialTimeout time.Duration
+
+	// PacketIdStart contains the first packet ID that will be used. Change it when multiple rcon
+	// connections are used. E.g. SquadJS uses ID 1 and 2, so these IDs shouldn't be used to prevent
+	// conflicts.
+	PacketIdStart int32
+
+	WriteTimeout time.Duration
+}
+
+func Connect(address string, password string, settings Settings) (rcon.Rcon, error) {
+	rc, err := rcon.Connect(address, password, rcon.Settings{
+		DialTimeout:   settings.DialTimeout,
+		PacketIdStart: settings.PacketIdStart,
+		WriteTimeout:  settings.WriteTimeout,
+	})
 	if err != nil {
 		return nil, err
 	}
