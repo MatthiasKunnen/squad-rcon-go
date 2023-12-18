@@ -40,15 +40,32 @@ type callback struct {
 }
 
 type rconImpl struct {
+	// Whether conn is authenticated.
 	authenticated bool
-	callbackLock  sync.Mutex
-	callbacks     map[int32]*callback
-	conn          net.Conn
-	dialTimeout   time.Duration
+
+	// Lock to be used before accessing the callbacks map.
+	callbackLock sync.Mutex
+
+	// Map of callbacks, key: packet ID, value callback to call when response is received.
+	callbacks map[int32]*callback
+
+	// TCP connection with RCON
+	conn net.Conn
+
+	// The time after which connecting is aborted.
+	dialTimeout time.Duration
+
+	// The next packet ID to use
 	execIdCounter int
+
+	// Lock needed before accessing execIdCounter.
 	idCounterLock sync.Mutex
-	startId       int
-	writeTimeout  time.Duration
+
+	// The first packet ID that can be used.
+	startId int
+
+	// The time to wait for writing to complete before aborting.
+	writeTimeout time.Duration
 }
 
 // Close closes the connection.
