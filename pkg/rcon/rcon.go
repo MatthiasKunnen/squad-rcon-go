@@ -11,7 +11,7 @@ type Rcon interface {
 	Execute(command string) (string, error)
 }
 
-type RconSettings struct {
+type Settings struct {
 	DialTimeout time.Duration
 
 	// PacketIdStart contains the first packet ID that will be used. Change it when multiple rcon
@@ -23,7 +23,7 @@ type RconSettings struct {
 }
 
 // Connect connects to the RCON server and authenticates.
-func Connect(address string, password string, settings RconSettings) (Rcon, error) {
+func Connect(address string, password string, settings Settings) (Rcon, error) {
 	client := &rconImpl{
 		dialTimeout:   5 * time.Second,
 		writeTimeout:  5 * time.Second,

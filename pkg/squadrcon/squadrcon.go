@@ -13,7 +13,7 @@ type SquadRcon struct {
 	rcon rcon.Rcon
 }
 
-func Connect(address string, password string, settings rcon.RconSettings) (rcon.Rcon, error) {
+func Connect(address string, password string, settings rcon.Settings) (rcon.Rcon, error) {
 	rc, err := rcon.Connect(address, password, settings)
 	if err != nil {
 		return nil, err
